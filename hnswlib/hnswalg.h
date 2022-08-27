@@ -1202,6 +1202,14 @@ namespace hnswlib {
 
         }
 
+        size_t getMaxElements() {
+            return max_elements_;
+        }
+
+        size_t getCurrentElementCount() {
+            std::unique_lock<std::mutex> templock_curr(cur_element_count_guard_);
+            return cur_element_count;
+        }
     };
 
 }
