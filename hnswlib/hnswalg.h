@@ -314,7 +314,8 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t, filter_func_t> {
         while (!candidate_set.empty()) {
             std::pair<dist_t, tableint> current_node_pair = candidate_set.top();
 
-            if ((-current_node_pair.first) > lowerBound && (top_candidates.size() == ef || has_deletions == false)) {
+            if ((-current_node_pair.first) > lowerBound &&
+                (top_candidates.size() == ef || (is_filter_disabled && !has_deletions))) {
                 break;
             }
             candidate_set.pop();
