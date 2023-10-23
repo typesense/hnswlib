@@ -53,4 +53,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
     add_executable(main tests/cpp/main.cpp tests/cpp/sift_1b.cpp)
     target_link_libraries(main hnswlib)
+      
+    add_executable(repair_test tests/cpp/repair_test.cpp)
+    target_link_libraries(repair_test hnswlib)
 endif()
