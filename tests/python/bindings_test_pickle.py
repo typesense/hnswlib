@@ -64,8 +64,6 @@ def test_space_main(self, space, dim):
     p.init_index(max_elements=self.num_elements, ef_construction=self.ef_construction, M=self.M)
     p0.init_index(max_elements=self.num_elements, ef_construction=self.ef_construction, M=self.M)
 
-    p.ef = self.ef
-    p0.ef = self.ef
 
     p1 = pickle.loads(pickle.dumps(p)) # pickle Index before adding items
 
@@ -81,10 +79,10 @@ def test_space_main(self, space, dim):
     self.assertTrue(np.allclose(p1.get_items(), p2.get_items()), "items for p1 and p2 must be same")
 
     # Test if returned distances are same
-    l, d = p.knn_query(test_data, k=self.k)
-    l0, d0 = p0.knn_query(test_data, k=self.k)
-    l1, d1 = p1.knn_query(test_data, k=self.k)
-    l2, d2 = p2.knn_query(test_data, k=self.k)
+    l, d = p.knn_query(test_data, k=self.k, ef=400)
+    l0, d0 = p0.knn_query(test_data, k=self.k, ef=400)
+    l1, d1 = p1.knn_query(test_data, k=self.k, ef=400)
+    l2, d2 = p2.knn_query(test_data, k=self.k, ef=400)
 
     self.assertLessEqual(np.sum(((d-d0)**2.) > 1e-3), self.dists_err_thresh, msg=f"knn distances returned by p and p0 must match")
     self.assertLessEqual(np.sum(((d0-d1)**2.) > 1e-3), self.dists_err_thresh, msg=f"knn distances returned by p0 and p1 must match")
@@ -102,11 +100,6 @@ def test_space_main(self, space, dim):
                            total_thresh=self.item_err_thresh,
                            dists_thresh=self.dists_err_thresh)
 
-    # Check ef parameter value
-    self.assertEqual(p.ef, self.ef, "incorrect value of p.ef")
-    self.assertEqual(p0.ef, self.ef, "incorrect value of p0.ef")
-    self.assertEqual(p2.ef, self.ef, "incorrect value of p2.ef")
-    self.assertEqual(p1.ef, self.ef, "incorrect value of p1.ef")
 
     # Check M parameter value
     self.assertEqual(p.M, self.M, "incorrect value of p.M")
@@ -126,7 +119,6 @@ class PickleUnitTests(unittest.TestCase):
     def setUp(self):
         self.ef_construction = 200
         self.M = 32
-        self.ef = 400
 
         self.num_elements = 1000
         self.num_test_elements = 100

@@ -106,12 +106,12 @@ std::vector<datatype> load_batch(std::string path, int size) {
 template <typename d_type>
 static float
 test_approx(std::vector<float> &queries, size_t qsize, hnswlib::HierarchicalNSW<d_type> &appr_alg, size_t vecdim,
-            std::vector<std::unordered_set<hnswlib::labeltype>> &answers, size_t K) {
+            std::vector<std::unordered_set<hnswlib::labeltype>> &answers, size_t K, size_t ef) {
     size_t correct = 0;
     size_t total = 0;
 
     for (int i = 0; i < qsize; i++) {
-        std::priority_queue<std::pair<d_type, hnswlib::labeltype>> result = appr_alg.searchKnn((char *)(queries.data() + vecdim * i), K);
+        std::priority_queue<std::pair<d_type, hnswlib::labeltype>> result = appr_alg.searchKnn((char *)(queries.data() + vecdim * i), K, nullptr, ef);
         total += K;
         while (result.size()) {
             if (answers[i].find(result.top().second) != answers[i].end()) {
@@ -148,13 +148,11 @@ test_vs_recall(
 
     bool test_passed = false;
     for (size_t ef : efs) {
-        appr_alg.setEf(ef);
-
         appr_alg.metric_hops = 0;
         appr_alg.metric_distance_computations = 0;
         StopW stopw = StopW();
 
-        float recall = test_approx<float>(queries, qsize, appr_alg, vecdim, answers, k);
+        float recall = test_approx<float>(queries, qsize, appr_alg, vecdim, answers, k, ef);
         float time_us_per_query = stopw.getElapsedTimeMicro() / qsize;
         float distance_comp_per_query =  appr_alg.metric_distance_computations / (1.0f * qsize);
         float hops_per_query =  appr_alg.metric_hops / (1.0f * qsize);

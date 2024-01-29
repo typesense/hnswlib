@@ -33,7 +33,6 @@ class RandomSelfTestCase(unittest.TestCase):
             hnsw_index = hnswlib.Index(space='l2', dim=dim)
             hnsw_index.init_index(max_elements=max_num_elements, ef_construction=200, M=16, allow_replace_deleted=True)
 
-            hnsw_index.set_ef(100)
             hnsw_index.set_num_threads(50)
 
             # Add batch 1 and 2
@@ -41,18 +40,18 @@ class RandomSelfTestCase(unittest.TestCase):
             hnsw_index.add_items(data2, labels2)  # maximum number of elements is reached
 
             # Delete nearest neighbors of batch 2
-            labels2_deleted, _ = hnsw_index.knn_query(data2, k=1)
+            labels2_deleted, _ = hnsw_index.knn_query(data2, k=1, ef=100)
             labels2_deleted_flat = labels2_deleted.flatten()
             # delete probable duplicates from nearest neighbors
             labels2_deleted_no_dup = set(labels2_deleted_flat)
             for l in labels2_deleted_no_dup:
                 hnsw_index.mark_deleted(l)
-            labels1_found, _ = hnsw_index.knn_query(data1, k=1)
+            labels1_found, _ = hnsw_index.knn_query(data1, k=1, ef=100)
             items = hnsw_index.get_items(labels1_found)
             diff_with_gt_labels = np.mean(np.abs(data1 - items))
             self.assertAlmostEqual(diff_with_gt_labels, 0, delta=1e-3)
 
-            labels2_after, _ = hnsw_index.knn_query(data2, k=1)
+            labels2_after, _ = hnsw_index.knn_query(data2, k=1, ef=100)
             labels2_after_flat = labels2_after.flatten()
             common = np.intersect1d(labels2_after_flat, labels2_deleted_flat)
             self.assertTrue(common.size == 0)

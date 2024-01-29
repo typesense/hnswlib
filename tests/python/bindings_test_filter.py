@@ -30,10 +30,6 @@ class RandomSelfTestCase(unittest.TestCase):
         hnsw_index.init_index(max_elements=num_elements, ef_construction=100, M=16)
         bf_index.init_index(max_elements=num_elements)
 
-        # Controlling the recall by setting ef:
-        # higher ef leads to better accuracy, but slower search
-        hnsw_index.set_ef(10)
-
         hnsw_index.set_num_threads(4)  # by default using all available cores
 
         print("Adding %d elements" % (len(data)))

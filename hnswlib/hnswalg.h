@@ -28,7 +28,6 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
     size_t maxM_{0};
     size_t maxM0_{0};
     size_t ef_construction_{0};
-    size_t ef_{ 0 };
 
     double mult_{0.0}, revSize_{0.0};
     int maxlevel_{0};
@@ -107,7 +106,6 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
         maxM_ = M_;
         maxM0_ = M_ * 2;
         ef_construction_ = std::max(ef_construction, M_);
-        ef_ = 10;
 
         level_generator_.seed(random_seed);
         update_probability_generator_.seed(random_seed + 1);
@@ -156,12 +154,6 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
             return a.first < b.first;
         }
     };
-
-
-    void setEf(size_t ef) {
-        ef_ = ef;
-    }
-
 
     inline std::mutex& getLabelOpMutex(labeltype label) const {
         // calculate hash
@@ -694,7 +686,6 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
             throw std::runtime_error("Not enough memory: loadIndex failed to allocate linklists");
         element_levels_ = std::vector<int>(max_elements);
         revSize_ = 1.0 / mult_;
-        ef_ = 10;
         for (size_t i = 0; i < cur_element_count; i++) {
             label_lookup_[getExternalLabel(i)] = i;
             unsigned int linkListSize;
@@ -1175,7 +1166,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
 
 
     std::priority_queue<std::pair<dist_t, labeltype >>
-    searchKnn(const void *query_data, size_t k, BaseFilterFunctor* isIdAllowed = nullptr) const {
+    searchKnn(const void *query_data, size_t k, BaseFilterFunctor* isIdAllowed = nullptr, const size_t ef_ = 10) const {
         std::priority_queue<std::pair<dist_t, labeltype >> result;
         if (cur_element_count == 0) return result;
 

@@ -30,9 +30,6 @@ class RandomSelfTestCase(unittest.TestCase):
 
             p.init_index(max_elements=num_elements//2, ef_construction=100, M=16)
 
-            # Controlling the recall by setting ef:
-            # higher ef leads to better accuracy, but slower search
-            p.set_ef(20)
 
             p.set_num_threads(idx % 8)  # by default using all available cores
 
@@ -44,7 +41,7 @@ class RandomSelfTestCase(unittest.TestCase):
             p.add_items(data1)
 
             # Query the elements for themselves and measure recall:
-            labels, distances = p.knn_query(data1, k=1)
+            labels, distances = p.knn_query(data1, k=1, ef=20)
 
             items = p.get_items(list(range(len(data1))))
 
@@ -62,7 +59,7 @@ class RandomSelfTestCase(unittest.TestCase):
             p.add_items(data2)
 
             # Query the elements for themselves and measure recall:
-            labels, distances = p.knn_query(data, k=1)
+            labels, distances = p.knn_query(data, k=1, ef=20)
             items=p.get_items(list(range(num_elements)))
 
             # Check the recall:

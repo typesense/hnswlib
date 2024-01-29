@@ -46,7 +46,6 @@ class RandomSelfTestCase(unittest.TestCase):
         hnsw_index = hnswlib.Index(space='l2', dim=dim)
         hnsw_index.init_index(max_elements=max_num_elements, ef_construction=200, M=16, allow_replace_deleted=True)
 
-        hnsw_index.set_ef(100)
         hnsw_index.set_num_threads(4)
 
         # Add batch 1 and 2
@@ -57,18 +56,18 @@ class RandomSelfTestCase(unittest.TestCase):
 
         # Delete nearest neighbors of batch 2
         print("Deleting neighbors of batch 2")
-        labels2_deleted, _ = hnsw_index.knn_query(data2, k=1)
+        labels2_deleted, _ = hnsw_index.knn_query(data2, k=1, ef=100)
         # delete probable duplicates from nearest neighbors
         labels2_deleted_no_dup = set(labels2_deleted.flatten())
         num_duplicates = len(labels2_deleted) - len(labels2_deleted_no_dup)
         for l in labels2_deleted_no_dup:
             hnsw_index.mark_deleted(l)
-        labels1_found, _ = hnsw_index.knn_query(data1, k=1)
+        labels1_found, _ = hnsw_index.knn_query(data1, k=1, ef=100)
         items = hnsw_index.get_items(labels1_found)
         diff_with_gt_labels = np.mean(np.abs(data1 - items))
         self.assertAlmostEqual(diff_with_gt_labels, 0, delta=1e-3)
 
-        labels2_after, _ = hnsw_index.knn_query(data2, k=1)
+        labels2_after, _ = hnsw_index.knn_query(data2, k=1, ef=100)
         for la in labels2_after:
             if la[0] in labels2_deleted_no_dup:
                 print(f"Found deleted label {la[0]} during knn search")
@@ -125,7 +124,7 @@ class RandomSelfTestCase(unittest.TestCase):
 
         # Check recall
         print("Checking recall")
-        labels_found, _ = hnsw_index.knn_query(data4_tr, k=1)
+        labels_found, _ = hnsw_index.knn_query(data4_tr, k=1, ef=100)
         recall = np.mean(labels_found.reshape(-1) == labels4_tr)
         print(f"Recall for the 4 batch: {recall}")
         self.assertGreater(recall, recall_threshold)
@@ -144,7 +143,7 @@ class RandomSelfTestCase(unittest.TestCase):
 
         # Check recall
         print("Checking recall")
-        labels_found, _ = hnsw_index_pckl.knn_query(data3_tr, k=1)
+        labels_found, _ = hnsw_index_pckl.knn_query(data3_tr, k=1, ef=100)
         recall = np.mean(labels_found.reshape(-1) == labels3_tr)
         print(f"Recall for the 3 batch: {recall}")
         self.assertGreater(recall, recall_threshold)
@@ -195,9 +194,7 @@ class RandomSelfTestCase(unittest.TestCase):
         bf_index = hnswlib.BFIndex(space='l2', dim=dim)
         bf_index.init_index(max_elements=max_num_elements)
 
-        hnsw_index_no_replace.set_ef(100)
         hnsw_index_no_replace.set_num_threads(50)
-        hnsw_index_with_replace.set_ef(100)
         hnsw_index_with_replace.set_num_threads(50)
 
         # Add data
