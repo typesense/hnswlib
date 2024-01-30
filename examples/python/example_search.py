@@ -23,11 +23,9 @@ p.init_index(max_elements=num_elements, ef_construction=200, M=16)
 # Element insertion (can be called several times):
 p.add_items(data, ids)
 
-# Controlling the recall by setting ef:
-p.set_ef(50)  # ef should always be > k
 
 # Query dataset, k - number of the closest elements (returns 2 numpy arrays)
-labels, distances = p.knn_query(data, k=1)
+labels, distances = p.knn_query(data, k=1, ef=50)
 
 # Index objects support pickling
 # WARNING: serialization via pickle.dumps(p) or p.__getstate__() is NOT thread-safe with p.add_items method!
