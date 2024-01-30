@@ -39,6 +39,8 @@ class Index():
                 start += 1
         self.index.add_items(data=data, ids=np.asarray(int_labels))
 
+    def set_ef(self, ef):
+        self.index.set_ef(ef)
 
     def load_index(self, path):
         self.index.load_index(path)
@@ -53,8 +55,8 @@ class Index():
     def set_num_threads(self, num_threads):
         self.index.set_num_threads(num_threads)
 
-    def knn_query(self, data, k=1, ef=10):
-        labels_int, distances = self.index.knn_query(data=data, k=k, ef=ef)
+    def knn_query(self, data, k=1):
+        labels_int, distances = self.index.knn_query(data=data, k=k)
         labels = []
         for li in labels_int:
             labels.append(

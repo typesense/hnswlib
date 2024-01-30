@@ -150,6 +150,7 @@ class Index {
     std::string space_name;
     int dim;
     size_t seed;
+    size_t default_ef;
 
     bool index_inited;
     bool ep_added;
@@ -176,6 +177,8 @@ class Index {
         ep_added = true;
         index_inited = false;
         num_threads_default = std::thread::hardware_concurrency();
+
+        default_ef = 10;
     }
 
 
@@ -199,8 +202,17 @@ class Index {
         appr_alg = new hnswlib::HierarchicalNSW<dist_t>(l2space, maxElements, M, efConstruction, random_seed, allow_replace_deleted);
         index_inited = true;
         ep_added = false;
+        appr_alg->ef_ = default_ef;
         seed = random_seed;
     }
+
+
+    void set_ef(size_t ef) {
+      default_ef = ef;
+      if (appr_alg)
+          appr_alg->ef_ = ef;
+    }
+
 
     void set_num_threads(int num_threads) {
         this->num_threads_default = num_threads;
@@ -400,6 +412,7 @@ class Index {
             "M"_a = appr_alg->M_,
             "mult"_a = appr_alg->mult_,
             "ef_construction"_a = appr_alg->ef_construction_,
+            "ef"_a = appr_alg->ef_,
             "has_deletions"_a = (bool)appr_alg->num_deleted_,
             "size_links_per_element"_a = appr_alg->size_links_per_element_,
             "allow_replace_deleted"_a = appr_alg->allow_replace_deleted_,
@@ -449,7 +462,8 @@ class Index {
             "seed"_a = seed);
 
         if (index_inited == false)
-            return py::dict(**params);
+            return py::dict(**params, "ef"_a = default_ef);
+
         auto ann_params = getAnnData();
 
         return py::dict(**params, **ann_params);
@@ -483,6 +497,7 @@ class Index {
         new_index->index_inited = index_inited_;
         new_index->ep_added = d["ep_added"].cast<bool>();
         new_index->num_threads_default = d["num_threads"].cast<int>();
+        new_index->default_ef = d["ef"].cast<size_t>();
 
         if (index_inited_)
             new_index->setAnnData(d);
@@ -517,6 +532,7 @@ class Index {
         assert_true(appr_alg->mult_ == d["mult"].cast<double>(), "Invalid value of mult_ ");
         assert_true(appr_alg->ef_construction_ == d["ef_construction"].cast<size_t>(), "Invalid value of ef_construction_ ");
 
+        appr_alg->ef_ = d["ef"].cast<size_t>();
 
         assert_true(appr_alg->size_links_per_element_ == d["size_links_per_element"].cast<size_t>(), "Invalid value of size_links_per_element_ ");
 
@@ -585,8 +601,7 @@ class Index {
         py::object input,
         size_t k = 1,
         int num_threads = -1,
-        const std::function<bool(hnswlib::labeltype)>& filter = nullptr,
-        const size_t ef = 10) {
+        const std::function<bool(hnswlib::labeltype)>& filter = nullptr) {
         py::array_t < dist_t, py::array::c_style | py::array::forcecast > items(input);
         auto buffer = items.request();
         hnswlib::labeltype* data_numpy_l;
@@ -615,7 +630,7 @@ class Index {
             if (normalize == false) {
                 ParallelFor(0, rows, num_threads, [&](size_t row, size_t threadId) {
                     std::priority_queue<std::pair<dist_t, hnswlib::labeltype >> result = appr_alg->searchKnn(
-                        (void*)items.data(row), k, p_idFilter, ef);
+                        (void*)items.data(row), k, p_idFilter);
                     if (result.size() != k)
                         throw std::runtime_error(
                             "Cannot return the results in a contigious 2D array. Probably ef or M is too small");
@@ -635,7 +650,7 @@ class Index {
                     normalize_vector((float*)items.data(row), (norm_array.data() + start_idx));
 
                     std::priority_queue<std::pair<dist_t, hnswlib::labeltype >> result = appr_alg->searchKnn(
-                        (void*)(norm_array.data() + start_idx), k, p_idFilter, ef);
+                        (void*)(norm_array.data() + start_idx), k, p_idFilter);
                     if (result.size() != k)
                         throw std::runtime_error(
                             "Cannot return the results in a contigious 2D array. Probably ef or M is too small");
@@ -805,8 +820,7 @@ class BFIndex {
     py::object knnQuery_return_numpy(
         py::object input,
         size_t k = 1,
-        const std::function<bool(hnswlib::labeltype)>& filter = nullptr,
-        const size_t ef = 10) {
+        const std::function<bool(hnswlib::labeltype)>& filter = nullptr) {
         py::array_t < dist_t, py::array::c_style | py::array::forcecast > items(input);
         auto buffer = items.request();
         hnswlib::labeltype *data_numpy_l;
@@ -825,7 +839,7 @@ class BFIndex {
 
             for (size_t row = 0; row < rows; row++) {
                 std::priority_queue<std::pair<dist_t, hnswlib::labeltype >> result = alg->searchKnn(
-                        (void *) items.data(row), k, p_idFilter, ef);
+                        (void *) items.data(row), k, p_idFilter);
                 for (int i = k - 1; i >= 0; i--) {
                     auto &result_tuple = result.top();
                     data_numpy_d[row * k + i] = result_tuple.first;
@@ -879,8 +893,7 @@ PYBIND11_PLUGIN(hnswlib) {
             py::arg("data"),
             py::arg("k") = 1,
             py::arg("num_threads") = -1,
-            py::arg("filter") = py::none(),
-            py::arg("ef") = 10)
+            py::arg("filter") = py::none())
         .def("add_items",
             &Index<float>::addItems,
             py::arg("data"),
@@ -889,6 +902,7 @@ PYBIND11_PLUGIN(hnswlib) {
             py::arg("replace_deleted") = false)
         .def("get_items", &Index<float, float>::getDataReturnList, py::arg("ids") = py::none())
         .def("get_ids_list", &Index<float>::getIdsList)
+        .def("set_ef", &Index<float>::set_ef, py::arg("ef"))
         .def("set_num_threads", &Index<float>::set_num_threads, py::arg("num_threads"))
         .def("save_index", &Index<float>::saveIndex, py::arg("path_to_index"))
         .def("load_index",
@@ -904,6 +918,15 @@ PYBIND11_PLUGIN(hnswlib) {
         .def_readonly("space", &Index<float>::space_name)
         .def_readonly("dim", &Index<float>::dim)
         .def_readwrite("num_threads", &Index<float>::num_threads_default)
+        .def_property("ef",
+          [](const Index<float> & index) {
+            return index.index_inited ? index.appr_alg->ef_ : index.default_ef;
+          },
+          [](Index<float> & index, const size_t ef_) {
+            index.default_ef = ef_;
+            if (index.appr_alg)
+              index.appr_alg->ef_ = ef_;
+        })
         .def_property_readonly("max_elements", [](const Index<float> & index) {
             return index.index_inited ? index.appr_alg->max_elements_ : 0;
         })
@@ -934,7 +957,7 @@ PYBIND11_PLUGIN(hnswlib) {
         py::class_<BFIndex<float>>(m, "BFIndex")
         .def(py::init<const std::string &, const int>(), py::arg("space"), py::arg("dim"))
         .def("init_index", &BFIndex<float>::init_new_index, py::arg("max_elements"))
-        .def("knn_query", &BFIndex<float>::knnQuery_return_numpy, py::arg("data"), py::arg("k") = 1, py::arg("filter") = py::none(), py::arg("ef") = 10)
+        .def("knn_query", &BFIndex<float>::knnQuery_return_numpy, py::arg("data"), py::arg("k") = 1, py::arg("filter") = py::none())
         .def("add_items", &BFIndex<float>::addItems, py::arg("data"), py::arg("ids") = py::none())
         .def("delete_vector", &BFIndex<float>::deleteVector, py::arg("label"))
         .def("save_index", &BFIndex<float>::saveIndex, py::arg("path_to_index"))

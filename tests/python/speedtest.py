@@ -28,6 +28,9 @@ p = hnswlib.Index(space='l2', dim=dim)  # possible options are l2, cosine or ip
 
 p.init_index(max_elements=num_elements, ef_construction=60, M=16)
 
+# Controlling the recall by setting ef:
+# higher ef leads to better accuracy, but slower search
+p.set_ef(10)
 
 # Set number of threads used during batch search/construction
 # By default using all available cores
@@ -42,12 +45,13 @@ construction_time=time.time()-t0
 p.set_num_threads(threads)
 times=[]
 time.sleep(1)
+p.set_ef(15)
 for _ in range(1):
     # p.load_index(index_path)
     for _ in range(3):
         t0=time.time()
         qdata=data[:5000*threads]
-        labels, distances = p.knn_query(qdata, k=1, ef=15)
+        labels, distances = p.knn_query(qdata, k=1)
         tt=time.time()-t0
         times.append(tt)
         recall=np.sum(labels.reshape(-1)==np.arange(len(qdata)))/len(qdata)

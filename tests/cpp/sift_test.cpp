@@ -89,13 +89,12 @@ float test_approx(
     HierarchicalNSW<float> &appr_alg,
     size_t vecdim,
     vector<std::priority_queue<std::pair<float, labeltype>>> &answers,
-    size_t k,
-    size_t ef = 10) {
+    size_t k) {
     size_t correct = 0;
     size_t total = 0;
 //#pragma omp parallel for
     for (int i = 0; i < qsize; i++) {
-        std::priority_queue<std::pair<float, labeltype >> result = appr_alg.searchKnn(massQ + vecdim * i, 10, nullptr, ef);
+        std::priority_queue<std::pair<float, labeltype >> result = appr_alg.searchKnn(massQ + vecdim * i, 10);
         std::priority_queue<std::pair<float, labeltype >> gt(answers[i]);
         unordered_set<labeltype> g;
         total += gt.size();
@@ -132,9 +131,10 @@ void test_vs_recall(
         efs.push_back(i);
     }*/
     for (size_t ef : efs) {
+        appr_alg.setEf(ef);
         StopW stopw = StopW();
 
-        float recall = test_approx(massQ, vecsize, qsize, appr_alg, vecdim, answers, k, ef);
+        float recall = test_approx(massQ, vecsize, qsize, appr_alg, vecdim, answers, k);
         float time_us_per_query = stopw.getElapsedTimeMicro() / qsize;
         cout << ef << "\t" << recall << "\t" << time_us_per_query << " us\n";
         if (recall > 1.0) {

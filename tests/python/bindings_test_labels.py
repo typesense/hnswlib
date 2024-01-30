@@ -31,6 +31,10 @@ class RandomSelfTestCase(unittest.TestCase):
 
             p.init_index(max_elements=num_elements, ef_construction=100, M=16)
 
+            # Controlling the recall by setting ef:
+            # higher ef leads to better accuracy, but slower search
+            p.set_ef(100)
+
             p.set_num_threads(4)  # by default using all available cores
 
             # We split the data in two batches:
@@ -69,12 +73,13 @@ class RandomSelfTestCase(unittest.TestCase):
 
             print("\nLoading index from '%s'\n" % index_path)
             p.load_index(index_path)
+            p.set_ef(100)
 
             print("Adding the second batch of %d elements" % (len(data2)))
             p.add_items(data2)
 
             # Query the elements for themselves and measure recall:
-            labels, distances = p.knn_query(data, k=1, ef=100)
+            labels, distances = p.knn_query(data, k=1)
             items = p.get_items(labels)
 
             # Check the recall:
@@ -89,7 +94,7 @@ class RandomSelfTestCase(unittest.TestCase):
             self.assertEqual(np.sum(~np.asarray(sorted_labels) == np.asarray(range(num_elements))), 0)
 
             # Delete data1
-            labels1_deleted, _ = p.knn_query(data1, k=1, ef=100)
+            labels1_deleted, _ = p.knn_query(data1, k=1)
             # delete probable duplicates from nearest neighbors
             labels1_deleted_no_dup = set(labels1_deleted.flatten())
             for l in labels1_deleted_no_dup:
@@ -111,9 +116,9 @@ class RandomSelfTestCase(unittest.TestCase):
             p.save_index(del_index_path)
             p = hnswlib.Index(space='l2', dim=dim)
             p.load_index(del_index_path)
+            p.set_ef(100)
 
-
-            labels1_after, _ = p.knn_query(data1, k=1, ef=100)
+            labels1_after, _ = p.knn_query(data1, k=1)
             for la in labels1_after:
                 if la[0] in labels1_deleted_no_dup:
                     print(f"Found deleted label {la[0]} during knn search after index loading")
@@ -122,7 +127,7 @@ class RandomSelfTestCase(unittest.TestCase):
             # Unmark deleted data
             for l in labels1_deleted_no_dup:
                 p.unmark_deleted(l)
-            labels_restored, _ = p.knn_query(data1, k=1, ef=100)
+            labels_restored, _ = p.knn_query(data1, k=1)
             self.assertAlmostEqual(np.mean(labels_restored.reshape(-1) == np.arange(len(data1))), 1.0, 3)
             print("All the data in data1 are restored")
 
