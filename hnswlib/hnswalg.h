@@ -765,8 +765,6 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
         lock_table.unlock();
 
         markDeletedInternal(internalId);
-        lock_table.lock();
-        label_lookup_.erase(label);
     }
 
 
@@ -890,7 +888,9 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
             if (label_lookup_.find(label) != label_lookup_.end() && !isMarkedDeleted(label_lookup_[label])) {
                 markDeletedInternal(label_lookup_[label]);
             }
-            label_lookup_.erase(label_replaced);
+            if(label_lookup_.find(label_replaced) != label_lookup_.end() && label_lookup_[label_replaced] == internal_id_replaced) {
+                label_lookup_.erase(label_replaced);
+            }
             label_lookup_[label] = internal_id_replaced;
             lock_table.unlock();
 
