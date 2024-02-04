@@ -271,9 +271,9 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
                     _mm_prefetch(getDataByInternalId(candidateSet.top().second), _MM_HINT_T0);
 #endif
 
-                    if (!isMarkedDeleted(candidate_id)) 
+                    if (!isMarkedDeleted(candidate_id))
                         top_candidates.emplace(dist1, candidate_id);
-                    
+
                     if (top_candidates.size() > ef_construction_)
                         top_candidates.pop();
 
