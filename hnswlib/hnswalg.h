@@ -271,9 +271,9 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
                     _mm_prefetch(getDataByInternalId(candidateSet.top().second), _MM_HINT_T0);
 #endif
 
-                    if (!isMarkedDeleted(candidate_id))
+                    if (!isMarkedDeleted(candidate_id)) 
                         top_candidates.emplace(dist1, candidate_id);
-
+                    
                     if (top_candidates.size() > ef_construction_)
                         top_candidates.pop();
 
@@ -765,6 +765,8 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
         lock_table.unlock();
 
         markDeletedInternal(internalId);
+        lock_table.lock();
+        label_lookup_.erase(label);
     }
 
 
@@ -884,6 +886,10 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
             setExternalLabel(internal_id_replaced, label);
 
             std::unique_lock <std::mutex> lock_table(label_lookup_lock);
+            // check if the label is already in the index
+            if (label_lookup_.find(label) != label_lookup_.end() && !isMarkedDeleted(label_lookup_[label])) {
+                markDeletedInternal(label_lookup_[label]);
+            }
             label_lookup_.erase(label_replaced);
             label_lookup_[label] = internal_id_replaced;
             lock_table.unlock();
