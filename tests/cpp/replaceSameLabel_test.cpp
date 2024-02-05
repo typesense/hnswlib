@@ -65,7 +65,7 @@ int main() {
     // check if the search results contain duplicate labels
     std::cout << "Checking search results for duplicate labels" << std::endl;
     std::unordered_set<int> labels_set;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < results.size(); i++) {
         labels_set.insert(results[i].second);
     }
     if (labels_set.size() != 10) {
