@@ -888,7 +888,8 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
             if (label_lookup_.find(label) != label_lookup_.end() && !isMarkedDeleted(label_lookup_[label])) {
                 markDeletedInternal(label_lookup_[label]);
             }
-            if(label_lookup_.find(label_replaced) != label_lookup_.end() && label_lookup_[label_replaced] == internal_id_replaced) {
+            auto label_replaced_lookup = label_lookup_.find(label_replaced);
+            if(label_replaced_lookup != label_lookup_.end() && label_replaced_lookup->second == internal_id_replaced) {
                 label_lookup_.erase(label_replaced);
             }
             label_lookup_[label] = internal_id_replaced;
