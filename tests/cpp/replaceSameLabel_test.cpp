@@ -35,7 +35,7 @@ int main() {
     std::vector<int> labels;
 
     std::cout << "Adding initial batch" << std::endl;
-    for(int row; row < max_elements; row++) {
+    for(int row = 0; row < max_elements; row++) {
         int label = distrib_int(rng);
         labels.push_back(label);
         alg_hnsw->addPoint((void*)(initial_batch + d * row), label, true);
