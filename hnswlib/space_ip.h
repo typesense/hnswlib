@@ -18,6 +18,19 @@ InnerProductDistance(const void *pVect1, const void *pVect2, const void *qty_ptr
     return 1.0f - InnerProduct(pVect1, pVect2, qty_ptr);
 }
 
+static float
+InnerProductDistance2(const void *pVect1, const void *pVect2, const void *qty_ptr) {
+    size_t qty = *((size_t *) qty_ptr);
+    float res = 0;
+    int a, b;
+    for (unsigned i = 0; i < qty; i++) {
+        a = ((int*)pVect1)[i];
+        b = ((int *) pVect2)[i];
+        res += a ^ b ;
+    }
+    return res;
+}
+
 #if defined(USE_AVX)
 
 // Favor using AVX if available.
@@ -320,7 +333,7 @@ class InnerProductSpace : public SpaceInterface<float> {
     size_t dim_;
 
  public:
-    InnerProductSpace(size_t dim) {
+    InnerProductSpace(size_t dim, bool is_boolean) {
         fstdistfunc_ = InnerProductDistance;
 #if defined(USE_AVX) || defined(USE_SSE) || defined(USE_AVX512)
     #if defined(USE_AVX512)
@@ -353,9 +366,13 @@ class InnerProductSpace : public SpaceInterface<float> {
         else if (dim > 4)
             fstdistfunc_ = InnerProductDistanceSIMD4ExtResiduals;
 #endif
-        dim_ = dim;
-        data_size_ = dim * sizeof(float);
-    }
+            if(is_boolean) {
+                fstdistfunc_ = InnerProductDistance2;
+            }
+
+            dim_ = dim;
+            data_size_ = dim * sizeof(float);
+        }
 
     size_t get_data_size() {
         return data_size_;
