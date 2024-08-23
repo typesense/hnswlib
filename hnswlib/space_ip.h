@@ -28,7 +28,7 @@ InnerProductDistance2(const void *pVect1, const void *pVect2, const void *qty_pt
         b = ((int *) pVect2)[i];
         res += a ^ b ;
     }
-    return res;
+    return __builtin_popcount(res);
 }
 
 #if defined(USE_AVX)
