@@ -8,6 +8,9 @@
 #include <assert.h>
 #include <unordered_set>
 #include <list>
+#ifdef __linux__
+#include <sys/mman.h>
+#endif
 
 namespace hnswlib {
 typedef unsigned int tableint;
@@ -45,6 +48,44 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
 
     size_t size_links_level0_{0};
     size_t offsetData_{0}, offsetLevel0_{0}, label_offset_{ 0 };
+
+    // Track the allocation independently of max_elements_: later resize steps can fail.
+    size_t level0_allocation_bytes_{0};
+
+    char *allocateLevel0Memory(size_t bytes) {
+#ifdef __linux__
+        void *p = mmap(nullptr, bytes, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (p == MAP_FAILED) return nullptr;
+#else
+        void *p = malloc(bytes);
+        if (p == nullptr) return nullptr;
+#endif
+        level0_allocation_bytes_ = bytes;
+        return static_cast<char *>(p);
+    }
+
+    char *resizeLevel0Memory(size_t bytes) {
+#ifdef __linux__
+        void *p = mremap(data_level0_memory_, level0_allocation_bytes_,
+                         bytes, MREMAP_MAYMOVE);
+        if (p == MAP_FAILED) return nullptr;
+#else
+        void *p = realloc(data_level0_memory_, bytes);
+        if (p == nullptr) return nullptr;
+#endif
+        level0_allocation_bytes_ = bytes;
+        return static_cast<char *>(p);
+    }
+
+    void releaseLevel0Memory() {
+#ifdef __linux__
+        if (data_level0_memory_ != nullptr)
+            munmap(data_level0_memory_, level0_allocation_bytes_);
+#else
+        free(data_level0_memory_);
+#endif
+    }
 
     char *data_level0_memory_{nullptr};
     char **linkLists_{nullptr};
@@ -118,7 +159,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
         label_offset_ = size_links_level0_ + data_size_;
         offsetLevel0_ = 0;
 
-        data_level0_memory_ = (char *) malloc(max_elements_ * size_data_per_element_);
+        data_level0_memory_ = allocateLevel0Memory(max_elements_ * size_data_per_element_);
         if (data_level0_memory_ == nullptr)
             throw std::runtime_error("Not enough memory");
 
@@ -140,7 +181,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
 
 
     ~HierarchicalNSW() {
-        free(data_level0_memory_);
+        releaseLevel0Memory();
         for (tableint i = 0; i < cur_element_count; i++) {
             if (element_levels_[i] > 0)
                 free(linkLists_[i]);
@@ -570,7 +611,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
         std::vector<std::mutex>(new_max_elements).swap(link_list_locks_);
 
         // Reallocate base layer
-        char * data_level0_memory_new = (char *) realloc(data_level0_memory_, new_max_elements * size_data_per_element_);
+        char * data_level0_memory_new = resizeLevel0Memory(new_max_elements * size_data_per_element_);
         if (data_level0_memory_new == nullptr)
             throw std::runtime_error("Not enough memory: resizeIndex failed to allocate base layer");
         data_level0_memory_ = data_level0_memory_new;
@@ -676,7 +717,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
 
         input.seekg(pos, input.beg);
 
-        data_level0_memory_ = (char *) malloc(max_elements * size_data_per_element_);
+        data_level0_memory_ = allocateLevel0Memory(max_elements * size_data_per_element_);
         if (data_level0_memory_ == nullptr)
             throw std::runtime_error("Not enough memory: loadIndex failed to allocate level0");
         input.read(data_level0_memory_, cur_element_count * size_data_per_element_);
